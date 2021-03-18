@@ -4,7 +4,7 @@ import pathlib
 import sys
 import pytest  # type: ignore
 
-import cvrf_util as cli
+import csaf_parser.tmp as cli
 
 
 def test_main_nok_empty(capsys):
