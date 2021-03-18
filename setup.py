@@ -1,46 +1,36 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""Interface to setup tools for PyPI publication
 
-from __future__ import print_function
-
-# Note: To use the 'upload' functionality of this file, you must:
-#   $ pip install twine
-
-import io
-import os
+Note: To use the 'upload' functionality of this file, you must:
+$ pip install twine
+"""
+import pathlib
+import shutil
+import subprocess
 import sys
-from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
 
+# The directory containing this file
+HERE = pathlib.Path(__file__).parent
+
+# The text of the README file
+README = (HERE / "README.md").read_text()
+
 # Package meta-data.
 NAME = 'csaf-parser'
+VERSION = '0.0.1'
 DESCRIPTION = 'CSAF Common Vulnerability Reporting Framework (CVRF) Viewer and Parser'
-URL = 'https://github.com/oasis-open/csaf-parser'
-EMAIL = 'osantos@cisco.com'
-AUTHOR = 'Omar Santos'
-
-# What packages are required for this module to be executed?
-REQUIRED = [
-    'lxml',
+REQUIRES = [
+    "jsonschema",
+    "lxml",
+    "xmlschema",
 ]
-
-# The rest you shouldn't have to touch too much :)
-# ------------------------------------------------
-# Except, perhaps the License and Trove Classifiers!
-# If you do change the License, remember to change the Trove Classifier for that!
-
-here = os.path.abspath(os.path.dirname(__file__))
-
-# Import the README and use it as the long-description.
-# Note: this will only work if 'README.md' is present in your MANIFEST.in file!
-with io.open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
-    long_description = '\n' + f.read()
-
-# Load the __version__.py module as a dictionary.
-about = {}
-with open(os.path.join(here, '__version__.py')) as f:
-    exec(f.read(), about)
+KEYWRODS = "csaf cvrf parser development"
+AUTHOR = 'Omar Santos'
+EMAIL = 'osantos@cisco.com'
+URL = 'https://github.com/oasis-open/csaf-parser'
 
 
 class UploadCommand(Command):
@@ -60,53 +50,62 @@ class UploadCommand(Command):
     def finalize_options(self):
         pass
 
+    @staticmethod
+    def _call(vector, shell=False):
+        """Execute the vector in a subprocess (default without shell, eg. for globbing)."""
+        try:
+            sts = subprocess.call(vector, shell=shell)
+            if sts < 0:
+                print("Child was terminated by signal", -sts, file=sys.stderr)
+            else:
+                print("Child returned", sts, file=sys.stderr)
+        except OSError as err:
+            print("Execution failed:", err, file=sys.stderr)
+
     def run(self):
         try:
             self.status('Removing previous builds…')
-            rmtree(os.path.join(here, 'dist'))
+            shutil.rmtree(pathlib.Path(HERE, 'dist'))
         except OSError:
             pass
 
         self.status('Building Source and Wheel (universal) distribution…')
-        os.system('{0} setup.py sdist bdist_wheel --universal'.format(sys.executable))
+        self._call([sys.executable, "setup.py", "sdist", "bdist_wheel", "--universal"])
 
         self.status('Uploading the package to PyPi via Twine…')
-        os.system('twine upload dist/*')
+        self._call(["twine", "upload", "dist/*"], shell=True)
 
         sys.exit()
 
 
 setup(
     name=NAME,
-    version=about['__version__'],
+    version=VERSION,
     description=DESCRIPTION,
-    long_description=long_description,
+    long_description=README,
     author=AUTHOR,
     author_email=EMAIL,
     url=URL,
-
-    # If we create more modules, put them in a subdirectory and use 'packages'
-    # instead of 'py_modules'.
-    # packages=find_packages(exclude=('tests',)),
-    py_modules=['cvrf_util'],
-
-    entry_points={
-        'console_scripts': ['cvrf_parse=cvrf_parse:main'],
-    },
-    install_requires=REQUIRED,
+    keywords=KEYWRODS,
+    packages=find_packages(exclude=("tests",)),
     include_package_data=True,
+    install_requires=REQUIRES,
+    entry_points={
+        "console_scripts": [
+            "csaf-parser=csaf_parser.cli:main",
+        ]
+    },
     license='MIT',
     classifiers=[
         # Trove classifiers
         # Full list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Developers",
+        "Topic :: Software Development :: Build Tools",
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.7',
-        # 'Programming Language :: Python :: 3',
-        # 'Programming Language :: Python :: 3.3',
-        # 'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        # 'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy'
     ],

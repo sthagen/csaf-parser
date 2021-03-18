@@ -1,1 +1,5 @@
+click
+jmespath
+jsonschema
 lxml==4.6.2
+xmlschema
