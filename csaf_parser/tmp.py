@@ -743,7 +743,7 @@ def parse_args(progname, argv):
                             CVRF_Syntax(cvrf_version).CVRF_CATALOG))
 
     parser.add_argument("-v", "--version", action="version", version="%(prog)s " + __revision__)
-    LOG.info(argv)
+
     return parser.parse_args(argv)
 
 
