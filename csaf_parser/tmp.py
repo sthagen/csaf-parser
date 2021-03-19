@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#! /usr/bin/env python
 """
 Description:
 Utility to parse and validate a CSAF Common Vulnerability Reporting Framework (CVRF)
@@ -14,20 +14,34 @@ This tool is based on the original cvrfparse utility created by Mike Schiffman o
 Farsight Security under the MIT License. https://github.com/mschiffm/cvrfparse
 """
 
-from __future__ import print_function
-
-import os
-import sys
-import copy
-# import codecs
-# import urllib2
 import argparse
+import copy
 import csv
-from datetime import datetime
+import datetime as dti
 import logging
+import os
+import pathlib
+import sys
+
 from lxml import etree
 
 __revision__ = "1.2.0"
+
+SCHEMA_ROOT = "schema"
+APP = 'csaf-parser'
+DEFAULT_CVRF_VERSION = "1.2"
+DEFAULT_OUTPUT_FORMAT = "txt"  # ["csv", "html", "txt"]
+
+LOG = logging.getLogger()  # Temporary refactoring: module level logger
+LOG_FOLDER = pathlib.Path('logs')
+LOG_FILE = APP + '.log'
+LOG_PATH = pathlib.Path(LOG_FOLDER, LOG_FILE) if LOG_FOLDER.is_dir() else pathlib.Path(LOG_FILE)
+LOG_FORMAT = {
+    'format': '%(asctime)s %(message)s',
+    'datefmt': '%m/%d/%Y %I:%M:%S %p',
+    'filename': LOG_PATH,
+    'level': logging.DEBUG
+}
 
 
 class CVRF_Syntax(object):
@@ -53,15 +67,15 @@ class CVRF_Syntax(object):
         self.CVRF_SCHEMA = "http://docs.oasis-open.org/csaf/csaf-cvrf/v1.2/cs01/schemas/cvrf.xsd"
         self.NAMESPACES = {x.upper(): "{http://docs.oasis-open.org/csaf/ns/csaf-cvrf/v1.2/%s}" % x for x in
                            ("cvrf", "vuln", "prod")}
-        self.CVRF_CATALOG = "schemata/catalog_1_2.xml"
-        self.CVRF_SCHEMA_FILE = "schemata/cvrf/1.2/cvrf.xsd"
+        self.CVRF_CATALOG = SCHEMA_ROOT + "/catalog_1_2.xml"
+        self.CVRF_SCHEMA_FILE = SCHEMA_ROOT + "/cvrf/1.2/cvrf.xsd"
 
         if cvrf_version == '1.1':
             self.CVRF_SCHEMA = "http://www.icasi.org/CVRF/schema/cvrf/1.1/cvrf.xsd"
             self.NAMESPACES = {x.upper(): "{http://www.icasi.org/CVRF/schema/%s/1.1}" % x for x in
                                ("cvrf", "vuln", "prod")}
-            self.CVRF_CATALOG = "schemata/catalog_1_1.xml"
-            self.CVRF_SCHEMA_FILE = "schemata/cvrf/1.1/cvrf.xsd"
+            self.CVRF_CATALOG = SCHEMA_ROOT + "/catalog_1_1.xml"
+            self.CVRF_SCHEMA_FILE = SCHEMA_ROOT + "/cvrf/1.1/cvrf.xsd"
 
 
 class PrependerAction(argparse.Action):
@@ -137,7 +151,7 @@ def print_header_rows(cvrf_doc, cvrf_version, args, output_format, f=sys.stdout,
 
     if output_format == 'html':
 
-        now = datetime.now()
+        now = dti.datetime.now()
         html = '<b>File: ' + args.file + '</b><br>'
         html += '<span>Updated: ' + now.strftime("%m/%d/%Y %H:%M:%S") + '</span><br>'
 
@@ -663,27 +677,17 @@ def derive_version_from_namespace(root):
     return not_found
 
 
-def main(progname=None):
-    # simple standard python logging
-    logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='csaf-parser.log',
-                        level=logging.DEBUG)  # filemode='w',
-    logging.info('-----------------------------------------------')
-
-    progname = progname if progname else os.path.basename(sys.argv[0])
-    logging.info(progname + ' v' + __revision__)
-    logging.info('command line args: ' + str(sys.argv))
-
-    default_cvrf_version = "1.2"
-    default_output_format = "txt"  # ["csv", "html", "txt"]
+def parse_args(progname, argv):
+    """Temporary refactoring only: Separate concerns."""
 
     # get specified cvrf version from command line args if any present as its needed to process below args
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--cvrf-version")
     parser.add_argument("--cvrf")
-    args, unknown = parser.parse_known_args()
+    args, unknown = parser.parse_known_args(argv)
 
     # get the cvrf fmt if specified, otherwise use the default
-    cvrf_version = args.cvrf_version if args.cvrf_version else default_cvrf_version
+    cvrf_version = args.cvrf_version if args.cvrf_version else DEFAULT_CVRF_VERSION
     logging.info('cvrf_version: ' + cvrf_version)
 
     parser = argparse.ArgumentParser(formatter_class=NonDupBracketFormatter,
@@ -699,7 +703,7 @@ def main(progname=None):
     parser.add_argument("--output-file", action="store",
                         help="specify output file name")
 
-    parser.add_argument("--output-format", action="store", default=default_output_format,
+    parser.add_argument("--output-format", action="store", default=DEFAULT_OUTPUT_FORMAT,
                         choices=CVRF_Syntax(cvrf_version).output_formats,
                         help="specify output format")
 
@@ -739,19 +743,38 @@ def main(progname=None):
                             CVRF_Syntax(cvrf_version).CVRF_CATALOG))
 
     parser.add_argument("-v", "--version", action="version", version="%(prog)s " + __revision__)
+    LOG.info(argv)
+    return parser.parse_args(argv)
 
-    args = parser.parse_args()
+
+def init_logger(name=None):
+    """Temporary refactoring: Initialize module level logger"""
+    global LOG
+    # simple standard python logging
+    logging.basicConfig(**LOG_FORMAT)  # filemode='w',
+    LOG = logging.getLogger(APP if name is None else name)
+
+
+def main(progname=None, argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    init_logger()
+    LOG.info('-----------------------------------------------')
+    progname = progname if progname else os.path.basename(sys.argv[0])
+    logging.info(progname + ' v' + __revision__)
+    logging.info('command line args: ' + str(sys.argv))
+
+    args = parse_args(progname, argv)
     logging.info('command line args processed successfully')
     logging.info(args)
 
     logging.info('file to parse: ' + args.file)
-    schema = args.schema if args.schema else CVRF_Syntax(cvrf_version).CVRF_SCHEMA_FILE
+    schema = args.schema if args.schema else CVRF_Syntax(args.cvrf_version).CVRF_SCHEMA_FILE
     logging.info('schema: ' + schema)
 
-    catalog = args.catalog if args.catalog else CVRF_Syntax(cvrf_version).CVRF_CATALOG
+    catalog = args.catalog if args.catalog else CVRF_Syntax(args.cvrf_version).CVRF_CATALOG
     logging.info('catalog: ' + catalog)
 
-    output_format = args.output_format if args.output_format else default_output_format
+    output_format = args.output_format if args.output_format else DEFAULT_OUTPUT_FORMAT
     logging.info('output format: ' + output_format)
 
     output_file = args.output_file if args.output_file else ''
@@ -760,6 +783,7 @@ def main(progname=None):
     else:
         logging.info('output file not specified - using stdout')
 
+    cvrf_version = args.cvrf_version
     related_product_tags = process_related_product_tag_args(args, CVRF_Syntax(cvrf_version).related_product_tags)
     logging.info('related_product_tags: ' + ','.join(related_product_tags))
 
@@ -859,7 +883,7 @@ if __name__ == "__main__":
     progname = os.path.basename(sys.argv[0])
 
     try:
-        main(progname)
+        main(progname, sys.argv[1:])
     except Exception:
         (exc_type, exc_value, exc_tb) = sys.exc_info()
         sys.excepthook(exc_type, exc_value, exc_tb)  # if debugging

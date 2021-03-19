@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=line-too-long,missing-docstring,reimported,unused-import,unused-variable
+import copy
 import pathlib
 import sys
 import pytest  # type: ignore
@@ -43,6 +44,18 @@ def test_main_nok_non_existing_folder_(capsys):
     with pytest.raises(SystemExit, match=message):
         cli_legacy.main(a_name)
     out, err = capsys.readouterr()
+
+
+@pytest.mark.skip
+def test_main_extract_1_2_type_ok_():
+    """
+    $ csaf_parser/tmp.py -f examples/1.2/cvrf_example_a.xml --cvrf DocumentType
+    [{http://docs.oasis-open.org/csaf/ns/csaf-cvrf/v1.2/cvrf}DocumentType]
+    Security Advisory
+    """
+    a_name = 'fetch_type'
+    argv = ["--file", "examples/1.2/cvrf_example_a.xml", "--cvrf", "DocumentType"]
+    assert cli_legacy.main(a_name, argv=argv) is None
 
 
 def test_main_nok_empty():
