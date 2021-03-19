@@ -21,5 +21,7 @@ The mappings from prefix to which criterion is in use are as follows:
 ### Negative Testcases
 The mappings from prefix to which criterion is in use are as follows:
 
-* `document-invalid` - Document part only, but mandatory document schema parts missing
+* `document-invalid` - as `document-only`, but mandatory document schema parts missing
+* `document-and-product-invalid` - as `document-and-product-`, but mandatory document schema parts missing
+* `document-and-vulnerability-invalid` - as `document-and-vulnerability-`, but mandatory document schema parts missing
 
