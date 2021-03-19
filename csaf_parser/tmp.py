@@ -678,7 +678,9 @@ def derive_version_from_namespace(root):
 
 
 def parse_args(progname, argv):
-    """Temporary refactoring only: Separate concerns."""
+    """Temporary refactoring only: Separate concerns.
+    This two pass parsing because of needed version info smells like Rococo - let us go for Bauhuas later.
+    """
 
     # get specified cvrf version from command line args if any present as its needed to process below args
     parser = argparse.ArgumentParser(add_help=False)
